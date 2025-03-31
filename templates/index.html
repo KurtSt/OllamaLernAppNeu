@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ollama Learning App</title>
+  <style>
+    :root {
+      --primary: #4a6fa5;
+      --secondary: #6c757d;
+      --success: #28a745;
+      --danger: #dc3545;
+      --light: #f8f9fa;
+      --dark: #343a40;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    h1 {
+      color: var(--primary);
+    }
+    
+    .settings-panel,
+    .import-panel,
+    .study-panel,
+    .statistics-panel,
+    .verwaltung-panel {
+      margin-bottom: 30px;
+      padding: 20px;
+      border-radius: 5px;
+      background-color: var(--light);
+    }
+    
+    .panel-title {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    
+    select, input, button, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+      margin-top: 5px;
+    }
+    
+    button:hover {
+      background-color: #3a5a8a;
+    }
+    
+    .btn-success {
+      background-color: var(--success);
+    }
+    
+    .btn-success:hover {
+      background-color: #218838;
+    }
+    
+    .btn-danger {
+      background-color: var(--danger);
+    }
+    
+    .btn-danger:hover {
+      background-color: #c82333;
+    }
+    
+    .question-card {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .feedback {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    
+    .correct {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .incorrect {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      margin-right: 5px;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+    }
+    
+    .tab.active {
+      background-color: white;
+      border-color: #ddd;
+      color: var(--primary);
+      font-weight: bold;
+      margin-bottom: -1px;
+    }
+    
+    .progress-bar {
+      height: 20px;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    
+    .progress {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+    }
+    
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: var(--primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Ollama Learning App</h1>
+      <p>Lerne mit KI-basierter Bewertung mithilfe deiner Ollama-Modelle</p>
+    </header>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="settings">Einstellungen</div>
+      <div class="tab" data-tab="import">Import</div>
+      <div class="tab" data-tab="study">Lernen</div>
+      <div class="tab" data-tab="statistics">Statistiken</div>
+      <div class="tab" data-tab="verwaltung">Datenverwaltung</div>
+    </div>
+    
+    <!-- Einstellungen -->
+    <div id="settings" class="settings-panel">
+      <h2 class="panel-title">Einstellungen</h2>
+      <div class="form-group">
+        <label for="ollama-url">Ollama API URL:</label>
+        <input type="text" id="ollama-url" value="http://localhost:11434" placeholder="z.B. http://localhost:11434">
+      </div>
+      <div class="form-group">
+        <label for="model-selector">Modell auswählen:</label>
+        <select id="model-selector">
+          <option value="">Bitte wählen...</option>
+        </select>
+        <button id="refresh-models" style="margin-top: 10px;">Modelle aktualisieren</button>
+      </div>
+      <div class="form-group">
+        <label for="success-count">Benötigte korrekte Antworten zum Abschließen:</label>
+        <input type="number" id="success-count" min="1" max="10" value="3">
+      </div>
+      <button id="save-settings">Einstellungen speichern</button>
+    </div>
+    
+    <!-- Import -->
+    <div id="import" class="import-panel hidden">
+      <h2 class="panel-title">Fragen und Antworten importieren</h2>
+      <div class="form-group">
+        <label for="csv-input">CSV-Datei importieren:</label>
+        <input type="file" id="csv-input" accept=".csv">
+        <p>Format: "Frage,Richtige Antwort" (eine Zeile pro Frage-Antwort-Paar)</p>
+      </div>
+      <div class="form-group">
+        <label for="manual-input">Oder manuell eingeben:</label>
+        <textarea id="manual-input" rows="10" placeholder="Frage 1,Antwort 1&#10;Frage 2,Antwort 2&#10;..."></textarea>
+      </div>
+      <button id="import-data">Daten importieren</button>
+    </div>
+    
+    <!-- Lernen -->
+    <div id="study" class="study-panel hidden">
+      <h2 class="panel-title">Lernen</h2>
+      <div id="question-container" class="question-card">
+        <h3>Frage:</h3>
+        <p id="current-question"></p>
+        <div class="form-group">
+          <label for="user-answer">Deine Antwort:</label>
+          <textarea id="user-answer" rows="3"></textarea>
+        </div>
+        <button id="check-answer">Antwort prüfen</button>
+        <div id="feedback" class="feedback hidden"></div>
+        <div id="correct-answer-container" class="hidden">
+          <h4>Richtige Antwort:</h4>
+          <p id="correct-answer"></p>
+        </div>
+        <div id="next-question-container" class="hidden">
+          <button id="next-question">Nächste Frage</button>
+        </div>
+        <div class="progress-info">
+          <p>Korrekte Antworten: <span id="correct-count">0</span>/<span id="required-count">3</span></p>
+          <div class="progress-bar">
+            <div id="progress" class="progress"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Statistiken -->
+    <div id="statistics" class="statistics-panel hidden">
+      <h2 class="panel-title">Lernstatistiken</h2>
+      <div>
+        <h3>Fortschritt</h3>
+        <p>Gelernte Fragen: <span id="completed-questions">0</span>/<span id="total-questions">0</span></p>
+        <div class="progress-bar">
+          <div id="overall-progress" class="progress"></div>
+        </div>
+      </div>
+      <div>
+        <h3>Schwierigste Fragen</h3>
+        <ul id="difficult-questions"></ul>
+      </div>
+    </div>
+    
+    <!-- Datenverwaltung -->
+    <div id="verwaltung" class="verwaltung-panel hidden">
+      <h2 class="panel-title">Datenverwaltung</h2>
+      <div class="form-group">
+        <label for="dataset-filter">Filter nach Datensatz:</label>
+        <select id="dataset-filter">
+          <option value="">Alle</option>
+        </select>
+      </div>
+      <div id="management-container">
+        <!-- Tabelle der Fragen wird hier angezeigt -->
+      </div>
+      <hr>
+      <h3>Neuen Datensatz erstellen</h3>
+      <div class="form-group">
+        <label for="new-dataset-name">Name des Datensatzes:</label>
+        <input type="text" id="new-dataset-name" placeholder="z.B. Hauptstädte">
+      </div>
+      <button id="create-dataset">Datensatz erstellen</button>
+      <div id="dataset-list">
+        <h4>Vorhandene Datensätze:</h4>
+        <ul id="dataset-ul"></ul>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // App-Zustand
+    const appState = {
+      settings: {
+        ollamaUrl: 'http://localhost:11434',
+        model: '',
+        requiredSuccessCount: 3
+      },
+      questions: [],
+      currentQuestionIndex: 0,
+      questionStats: {},
+      availableModels: [],
+      datasets: []
+    };
+    
+    // DOM-Elemente
+    const elements = {
+      tabs: document.querySelectorAll('.tab'),
+      tabContents: {
+        settings: document.getElementById('settings'),
+        import: document.getElementById('import'),
+        study: document.getElementById('study'),
+        statistics: document.getElementById('statistics'),
+        verwaltung: document.getElementById('verwaltung')
+      },
+      settings: {
+        ollamaUrl: document.getElementById('ollama-url'),
+        modelSelector: document.getElementById('model-selector'),
+        refreshModels: document.getElementById('refresh-models'),
+        successCount: document.getElementById('success-count'),
+        saveSettings: document.getElementById('save-settings')
+      },
+      import: {
+        csvInput: document.getElementById('csv-input'),
+        manualInput: document.getElementById('manual-input'),
+        importData: document.getElementById('import-data')
+      },
+      study: {
+        questionContainer: document.getElementById('question-container'),
+        currentQuestion: document.getElementById('current-question'),
+        userAnswer: document.getElementById('user-answer'),
+        checkAnswer: document.getElementById('check-answer'),
+        feedback: document.getElementById('feedback'),
+        correctAnswerContainer: document.getElementById('correct-answer-container'),
+        correctAnswer: document.getElementById('correct-answer'),
+        nextQuestionContainer: document.getElementById('next-question-container'),
+        nextQuestion: document.getElementById('next-question'),
+        correctCount: document.getElementById('correct-count'),
+        requiredCount: document.getElementById('required-count'),
+        progress: document.getElementById('progress')
+      },
+      statistics: {
+        completedQuestions: document.getElementById('completed-questions'),
+        totalQuestions: document.getElementById('total-questions'),
+        overallProgress: document.getElementById('overall-progress'),
+        difficultQuestions: document.getElementById('difficult-questions')
+      }
+    };
+    
+    // Tab-Wechsel
+    elements.tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.getAttribute('data-tab');
+        
+        // Aktiven Tab setzen
+        elements.tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Alle Tab-Inhalte verstecken
+        Object.keys(elements.tabContents).forEach(key => {
+          elements.tabContents[key].classList.add('hidden');
+        });
+        elements.tabContents[tabName].classList.remove('hidden');
+        
+        // Spezielle Aktionen für bestimmte Tabs
+        if (tabName === 'statistics') {
+          updateStatistics();
+        } else if (tabName === 'verwaltung') {
+          updateManagementView();
+          updateDatasetFilter();
+          updateDatasetList();
+        }
+      });
+    });
+    
+    // Einstellungen speichern
+    elements.settings.saveSettings.addEventListener('click', () => {
+      appState.settings.ollamaUrl = elements.settings.ollamaUrl.value;
+      appState.settings.model = elements.settings.modelSelector.value;
+      appState.settings.requiredSuccessCount = parseInt(elements.settings.successCount.value);
+      
+      elements.study.requiredCount.textContent = appState.settings.requiredSuccessCount;
+      
+      saveToLocalStorage();
+      
+      alert('Einstellungen gespeichert!');
+    });
+    
+    // Modelle aktualisieren
+    elements.settings.refreshModels.addEventListener('click', async () => {
+      try {
+        const ollamaUrl = elements.settings.ollamaUrl.value;
+        const response = await fetch(`${ollamaUrl}/api/tags`);
+        
+        if (!response.ok) {
+          throw new Error(`Fehler beim Abrufen der Modelle: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        appState.availableModels = data.models || [];
+        
+        // Modell-Selector aktualisieren
+        const modelSelector = elements.settings.modelSelector;
+        modelSelector.innerHTML = '<option value="">Bitte wählen...</option>';
+        
+        appState.availableModels.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.name;
+          option.textContent = model.name;
+          modelSelector.appendChild(option);
+        });
+        
+        if (appState.settings.model) {
+          modelSelector.value = appState.settings.model;
+        }
+        
+        alert('Modelle erfolgreich aktualisiert!');
+      } catch (error) {
+        console.error('Fehler beim Aktualisieren der Modelle:', error);
+        alert(`Fehler beim Aktualisieren der Modelle: ${error.message}`);
+      }
+    });
+    
+    // Daten importieren
+    elements.import.importData.addEventListener('click', () => {
+      let csvData = '';
+      
+      if (elements.import.csvInput.files.length > 0) {
+        const file = elements.import.csvInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+          csvData = event.target.result;
+          processImportData(csvData);
+        };
+        
+        reader.readAsText(file);
+      } else if (elements.import.manualInput.value.trim() !== '') {
+        csvData = elements.import.manualInput.value;
+        processImportData(csvData);
+      } else {
+        alert('Bitte wähle eine CSV-Datei aus oder gib manuell Daten ein.');
+      }
+    });
+    
+    // CSV-Daten verarbeiten
+    function processImportData(csvData) {
+      const lines = csvData.split('\n');
+      const newQuestions = [];
+      
+      for (const line of lines) {
+        if (line.trim() === '') continue;
+        
+        const parts = line.split(',');
+        if (parts.length >= 2) {
+          const question = parts[0].trim();
+          const correctAnswer = parts.slice(1).join(',').trim();
+          
+          newQuestions.push({
+            id: Date.now() + Math.random(), // einfache eindeutige ID
+            question,
+            correctAnswer,
+            successCount: 0,
+            dataset: ""
+          });
+        }
+      }
+      
+      if (newQuestions.length > 0) {
+        appState.questions = [...appState.questions, ...newQuestions];
+        saveToLocalStorage();
+        updateStatistics();
+        alert(`${newQuestions.length} Fragen erfolgreich importiert!`);
+        
+        // Zu Lernen Tab wechseln
+        elements.tabs.forEach(tab => {
+          if (tab.getAttribute('data-tab') === 'study') {
+            tab.click();
+          }
+        });
+        
+        // Erste Frage laden
+        if (appState.questions.length > 0) {
+          loadQuestion(0);
+        }
+      } else {
+        alert('Keine gültigen Fragen gefunden. Bitte überprüfe das Format.');
+      }
+    }
+    
+    // Frage laden
+    function loadQuestion(index) {
+      if (index >= 0 && index < appState.questions.length) {
+        appState.currentQuestionIndex = index;
+        const question = appState.questions[index];
+        
+        elements.study.currentQuestion.textContent = question.question;
+        elements.study.userAnswer.value = '';
+        elements.study.feedback.classList.add('hidden');
+        elements.study.correctAnswerContainer.classList.add('hidden');
+        elements.study.nextQuestionContainer.classList.add('hidden');
+        
+        // Fortschritt anzeigen
+        elements.study.correctCount.textContent = question.successCount || 0;
+        const progressPercentage = (question.successCount / appState.settings.requiredSuccessCount) * 100;
+        elements.study.progress.style.width = `${Math.min(progressPercentage, 100)}%`;
+      }
+    }
+    
+    // Antwort prüfen
+    elements.study.checkAnswer.addEventListener('click', async () => {
+      const userAnswer = elements.study.userAnswer.value.trim();
+      
+      if (userAnswer === '') {
+        alert('Bitte gib eine Antwort ein.');
+        return;
+      }
+      
+      const currentQuestion = appState.questions[appState.currentQuestionIndex];
+      
+      try {
+        // KI-Bewertung mit Ollama API
+        if (!appState.settings.model) {
+          throw new Error('Kein Modell ausgewählt. Bitte wähle ein Modell in den Einstellungen.');
+        }
+        
+        elements.study.feedback.textContent = 'Bewertung wird durchgeführt...';
+        elements.study.feedback.className = 'feedback';
+        elements.study.feedback.classList.remove('hidden');
+        
+        const prompt = `Du bist ein Professor, der Antworten von Studenten bewertet.
+        
+Frage: ${currentQuestion.question}
+Richtige Antwort: ${currentQuestion.correctAnswer}
+Antwort des Schülers: ${userAnswer}
+
+Ist die Antwort des Students inhaltlich korrekt? Bitte antworte nur mit "JA" oder "NEIN" und einer kurzen Begründung.`;
+        
+        const response = await fetch(`${appState.settings.ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: appState.settings.model,
+            prompt: prompt,
+            stream: false
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Fehler bei der KI-Bewertung: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const aiResponse = data.response;
+        
+        // Bestimmen, ob die Antwort korrekt ist
+        const isCorrect = aiResponse.toUpperCase().includes('JA');
+        
+        // Feedback anzeigen
+        elements.study.feedback.textContent = aiResponse;
+        elements.study.feedback.className = 'feedback';
+        elements.study.feedback.classList.add(isCorrect ? 'correct' : 'incorrect');
+        elements.study.feedback.classList.remove('hidden');
+        
+        // Richtige Antwort anzeigen
+        elements.study.correctAnswer.textContent = currentQuestion.correctAnswer;
+        elements.study.correctAnswerContainer.classList.remove('hidden');
+        
+        // Fortschritt aktualisieren
+        if (isCorrect) {
+          currentQuestion.successCount = (currentQuestion.successCount || 0) + 1;
+        } else {
+          currentQuestion.successCount = 0;
+        }
+        
+        // Nächste Frage-Button anzeigen
+        elements.study.nextQuestionContainer.classList.remove('hidden');
+        
+        // Fortschrittsanzeige aktualisieren
+        elements.study.correctCount.textContent = currentQuestion.successCount;
+        const progressPercentage = (currentQuestion.successCount / appState.settings.requiredSuccessCount) * 100;
+        elements.study.progress.style.width = `${Math.min(progressPercentage, 100)}%`;
+        
+        // Fortschritt speichern
+        saveToLocalStorage();
+        
+      } catch (error) {
+        console.error('Fehler bei der Antwortprüfung:', error);
+        elements.study.feedback.textContent = `Fehler: ${error.message}`;
+        elements.study.feedback.className = 'feedback incorrect';
+        elements.study.feedback.classList.remove('hidden');
+      }
+    });
+    
+    // Nächste Frage laden
+    elements.study.nextQuestion.addEventListener('click', () => {
+      let nextIndex = null;
+      
+      for (let i = 0; i < appState.questions.length; i++) {
+        if (appState.questions[i].successCount < appState.settings.requiredSuccessCount) {
+          nextIndex = i;
+          break;
+        }
+      }
+      
+      if (nextIndex === null && appState.questions.length > 0) {
+        nextIndex = 0;
+      }
+      
+      if (nextIndex !== null) {
+        loadQuestion(nextIndex);
+      } else {
+        alert('Keine Fragen vorhanden. Bitte importiere zuerst Fragen.');
+      }
+    });
+    
+    // Statistiken aktualisieren
+    function updateStatistics() {
+      const totalQuestions = appState.questions.length;
+      const completedQuestions = appState.questions.filter(q => 
+        q.successCount >= appState.settings.requiredSuccessCount
+      ).length;
+      
+      elements.statistics.totalQuestions.textContent = totalQuestions;
+      elements.statistics.completedQuestions.textContent = completedQuestions;
+      
+      const progressPercentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
+      elements.statistics.overallProgress.style.width = `${progressPercentage}%`;
+      
+      const difficultQuestions = [...appState.questions]
+        .filter(q => q.successCount < appState.settings.requiredSuccessCount)
+        .sort((a, b) => (a.successCount || 0) - (b.successCount || 0))
+        .slice(0, 5);
+      
+      elements.statistics.difficultQuestions.innerHTML = '';
+      
+      difficultQuestions.forEach(q => {
+        const li = document.createElement('li');
+        li.textContent = `${q.question} (${q.successCount || 0}/${appState.settings.requiredSuccessCount} korrekt)`;
+        elements.statistics.difficultQuestions.appendChild(li);
+      });
+    }
+    
+    // Funktionen für Datenverwaltung
+    function updateManagementView() {
+      const container = document.getElementById('management-container');
+      container.innerHTML = '';
+      
+      let filteredQuestions = appState.questions;
+      const datasetFilter = document.getElementById('dataset-filter').value;
+      if (datasetFilter) {
+        filteredQuestions = filteredQuestions.filter(q => q.dataset === datasetFilter);
+      }
+      
+      if (filteredQuestions.length === 0) {
+        container.innerHTML = '<p>Keine Fragen gefunden.</p>';
+        return;
+      }
+      
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      ['ID', 'Frage', 'Richtige Antwort', 'Datensatz', 'Aktionen'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      
+      const tbody = document.createElement('tbody');
+      filteredQuestions.forEach(q => {
+        const row = document.createElement('tr');
+        
+        // ID
+        const idCell = document.createElement('td');
+        idCell.textContent = q.id;
+        row.appendChild(idCell);
+        
+        // Frage
+        const questionCell = document.createElement('td');
+        questionCell.textContent = q.question;
+        questionCell.contentEditable = "true";
+        row.appendChild(questionCell);
+        
+        // Richtige Antwort
+        const answerCell = document.createElement('td');
+        answerCell.textContent = q.correctAnswer;
+        answerCell.contentEditable = "true";
+        row.appendChild(answerCell);
+        
+        // Datensatz (als Dropdown)
+        const datasetCell = document.createElement('td');
+        const select = document.createElement('select');
+        const emptyOption = document.createElement('option');
+        emptyOption.value = "";
+        emptyOption.textContent = "Ohne";
+        select.appendChild(emptyOption);
+        appState.datasets.forEach(ds => {
+          const option = document.createElement('option');
+          option.value = ds;
+          option.textContent = ds;
+          select.appendChild(option);
+        });
+        select.value = q.dataset || "";
+        select.addEventListener('change', () => {
+          q.dataset = select.value;
+          saveToLocalStorage();
+        });
+        datasetCell.appendChild(select);
+        row.appendChild(datasetCell);
+        
+        // Aktionen
+        const actionsCell = document.createElement('td');
+        
+        // Speichern-Button
+        const saveButton = document.createElement('button');
+        saveButton.textContent = 'Speichern';
+        saveButton.addEventListener('click', () => {
+          q.question = questionCell.textContent;
+          q.correctAnswer = answerCell.textContent;
+          q.dataset = select.value;
+          saveToLocalStorage();
+          alert('Änderungen gespeichert.');
+          updateManagementView();
+          updateStatistics();
+        });
+        actionsCell.appendChild(saveButton);
+        
+        // Löschen-Button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Löschen';
+        deleteButton.classList.add('btn-danger');
+        deleteButton.addEventListener('click', () => {
+          if (confirm('Möchtest du diese Frage wirklich löschen?')) {
+            appState.questions = appState.questions.filter(item => item.id !== q.id);
+            saveToLocalStorage();
+            updateManagementView();
+            updateStatistics();
+          }
+        });
+        actionsCell.appendChild(deleteButton);
+        
+        row.appendChild(actionsCell);
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+    
+    function updateDatasetFilter() {
+      const filter = document.getElementById('dataset-filter');
+      filter.innerHTML = '<option value="">Alle</option>';
+      appState.datasets.forEach(ds => {
+        const option = document.createElement('option');
+        option.value = ds;
+        option.textContent = ds;
+        filter.appendChild(option);
+      });
+    }
+    
+    function updateDatasetList() {
+      const ul = document.getElementById('dataset-ul');
+      ul.innerHTML = '';
+      appState.datasets.forEach((ds, index) => {
+        const li = document.createElement('li');
+        li.textContent = ds + " ";
+        // Löschen-Button für den Datensatz
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Löschen';
+        delBtn.classList.add('btn-danger');
+        delBtn.style.fontSize = '0.8rem';
+        delBtn.addEventListener('click', () => {
+          if (confirm(`Datensatz "${ds}" wirklich löschen?`)) {
+            // Entferne den Datensatz aus den Datensätzen
+            appState.datasets.splice(index, 1);
+            // Entferne den Datensatz auch aus allen Fragen, die diesen nutzen
+            appState.questions.forEach(q => {
+              if (q.dataset === ds) {
+                q.dataset = "";
+              }
+            });
+            saveToLocalStorage();
+            updateDatasetFilter();
+            updateDatasetList();
+            updateManagementView();
+          }
+        });
+        li.appendChild(delBtn);
+        ul.appendChild(li);
+      });
+    }
+    
+    document.getElementById('create-dataset').addEventListener('click', () => {
+      const newDatasetName = document.getElementById('new-dataset-name').value.trim();
+      if (newDatasetName && !appState.datasets.includes(newDatasetName)) {
+        appState.datasets.push(newDatasetName);
+        saveToLocalStorage();
+        updateDatasetFilter();
+        updateDatasetList();
+        alert('Datensatz erstellt.');
+        document.getElementById('new-dataset-name').value = '';
+      } else {
+        alert('Bitte einen gültigen und eindeutigen Namen eingeben.');
+      }
+    });
+    
+    document.getElementById('dataset-filter').addEventListener('change', updateManagementView);
+    
+    // LocalStorage-Funktionen
+    function saveToLocalStorage() {
+      localStorage.setItem('ollamaLearnSettings', JSON.stringify(appState.settings));
+      localStorage.setItem('ollamaLearnQuestions', JSON.stringify(appState.questions));
+      localStorage.setItem('ollamaLearnDatasets', JSON.stringify(appState.datasets));
+    }
+    
+    function loadFromLocalStorage() {
+      const settings = localStorage.getItem('ollamaLearnSettings');
+      const questions = localStorage.getItem('ollamaLearnQuestions');
+      const datasets = localStorage.getItem('ollamaLearnDatasets');
+      
+      if (settings) {
+        appState.settings = JSON.parse(settings);
+        elements.settings.ollamaUrl.value = appState.settings.ollamaUrl;
+        elements.settings.successCount.value = appState.settings.requiredSuccessCount;
+        elements.study.requiredCount.textContent = appState.settings.requiredSuccessCount;
+      }
+      
+      if (questions) {
+        appState.questions = JSON.parse(questions);
+        updateStatistics();
+      }
+      
+      if (datasets) {
+        appState.datasets = JSON.parse(datasets);
+      }
+    }
+    
+    // App initialisieren
+    async function initApp() {
+      loadFromLocalStorage();
+      
+      // Modelle laden, wenn API-URL vorhanden ist
+      if (appState.settings.ollamaUrl) {
+        try {
+          elements.settings.refreshModels.click();
+        } catch (error) {
+          console.error('Fehler beim initialen Laden der Modelle:', error);
+        }
+      }
+      
+      if (appState.questions.length > 0) {
+        loadQuestion(0);
+      }
+    }
+    
+    // App starten
+    initApp();
+  </script>
+</body>
+</html>
